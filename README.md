@@ -4,12 +4,14 @@ PASTA (PAthway-oriented Spatial gene impuTAtaion) is a tool to imputate pathway 
 The spatial transcriptomics dataset and the corresponding reference scRNA-seq data should be from the same tissue for imputation accuracy. 
 
 # How to install
-- Set up environment \\
+- Set up environment 
+
 `conda env create -f environment.yml`
 
-- Install PASTA by typing the following in shell \\
+- Install PASTA by typing the following in shell
+
 `
-conda activate PASTA\_env
+conda activate PASTA_env
 pip install PASTA
 `
 
