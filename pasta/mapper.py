@@ -1,7 +1,3 @@
-"""
-    Mapping helpers
-"""
-
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -11,13 +7,10 @@ import logging
 from scipy.sparse.csc import csc_matrix
 from scipy.sparse.csr import csr_matrix
 
-import RL_mapping_optimizer as mo
-import RL_utils as ut
-
-# from torch.nn.functional import cosine_similarity
+import optimizer as mo
+import utils as ut
 
 logging.getLogger().setLevel(logging.INFO)
-
 
 def pp_adatas(adata_sc, adata_sp, genes=None, gene_to_lowercase = True):
     """
@@ -78,6 +71,7 @@ def pp_adatas(adata_sc, adata_sp, genes=None, gene_to_lowercase = True):
         )
     )
 
+"""
     # Calculate uniform density prior as 1/number_of_spots
     adata_sp.obs["uniform_density"] = np.ones(adata_sp.X.shape[0]) / adata_sp.X.shape[0]
     logging.info(
@@ -90,7 +84,7 @@ def pp_adatas(adata_sc, adata_sp, genes=None, gene_to_lowercase = True):
     logging.info(
         f"rna count based density prior is calculated and saved in `obs``rna_count_based_density` of the spatial Anndata."
     )
-        
+"""     
 
 
 def map_cells_to_space(
@@ -101,22 +95,13 @@ def map_cells_to_space(
     ncell_thres, 
     sp_celltypes, # spatial celltype
     cv_train_genes=None,
-    cluster_label=None,
-    mode="cells",
     device="cpu",
     learning_rate=0.01,
     num_epochs=500,
-    scale=True,
-    lambda_d=0,
-    lambda_genec=1,
+    lambda_g1=1,
     lambda_g2=0,
-    lambda_r=0,
-    lambda_count=1,
-    lambda_f_reg=1,
-    target_count=None,
     random_state=None,
     verbose=True,
-    density_prior='rna_count_based',
 ):
     """
     Map single cell data (`adata_sc`) on spatial data (`adata_sp`).
@@ -125,54 +110,23 @@ def map_cells_to_space(
         adata_sc (AnnData): single cell data
         adata_sp (AnnData): gene spatial data
         cv_train_genes (list): Optional. Training gene list. Default is None.
-        cluster_label (str): Optional. Field in `adata_sc.obs` used for aggregating single cell data. Only valid for `mode=clusters`.
         mode (str): Optional. Tangram mapping mode. Currently supported: 'cell', 'clusters', 'constrained'. Default is 'cell'.
         device (string or torch.device): Optional. Default is 'cpu'.
         learning_rate (float): Optional. Learning rate for the optimizer. Default is 0.1.
         num_epochs (int): Optional. Number of epochs. Default is 1000.
-        scale (bool): Optional. Whether weight input single cell data by the number of cells in each cluster, only valid when cluster_label is not None. Default is True.
-        lambda_d (float): Optional. Hyperparameter for the density term of the optimizer. Default is 0.
         lambda_genec (float): Optional. Hyperparameter for the gene-voxel similarity term of the optimizer. Default is 1.
         lambda_g2 (float): Optional. Hyperparameter for the voxel-gene similarity term of the optimizer. Default is 0.
-        lambda_r (float): Optional. Strength of entropy regularizer. An higher entropy promotes probabilities of each cell peaked over a narrow portion of space. lambda_r = 0 corresponds to no entropy regularizer. Default is 0.
-        lambda_count (float): Optional. Regularizer for the count term. Default is 1. Only valid when mode == 'constrained'
-        lambda_f_reg (float): Optional. Regularizer for the filter, which promotes Boolean values (0s and 1s) in the filter. Only valid when mode == 'constrained'. Default is 1.
-        target_count (int): Optional. The number of cells to be filtered. Default is None.
         random_state (int): Optional. pass an int to reproduce training. Default is None.
         verbose (bool): Optional. If print training details. Default is True.
-        density_prior (str, ndarray or None): Spatial density of spots, when is a string, value can be 'rna_count_based' or 'uniform', when is a ndarray, shape = (number_spots,). This array should satisfy the constraints sum() == 1. If None, the density term is ignored. Default value is 'rna_count_based'.
-
+    
     Returns:
         a cell-by-spot AnnData containing the probability of mapping cell i on spot j.
         The `uns` field of the returned AnnData contains the training genes.
     """
 
     # check invalid values for arguments
-    if lambda_genec == 0:
+    if lambda_g1 == 0:
         raise ValueError("lambda_genec cannot be 0.")
-
-    if (type(density_prior) is str) and (
-        density_prior not in ["rna_count_based", "uniform", None]
-    ):
-        raise ValueError("Invalid input for density_prior.")
-
-    if density_prior is not None and (lambda_d == 0 or lambda_d is None):
-        lambda_d = 1
-
-    if lambda_d > 0 and density_prior is None:
-        raise ValueError("When lambda_d is set, please define the density_prior.")
-
-    if mode not in ["clusters", "cells", "constrained"]:
-        raise ValueError('Argument "mode" must be "cells", "clusters" or "constrained')
-
-    if mode == "clusters" and cluster_label is None:
-        raise ValueError("A cluster_label must be specified if mode is 'clusters'.")
-
-    if mode == "constrained" and not all([target_count, lambda_f_reg, lambda_count]):
-        raise ValueError(
-            "target_count, lambda_f_reg and lambda_count must be specified if mode is 'constrained'."
-        )
-
 
     # Check if training_genes key exist/is valid in adatas.uns
     if not set(["training_genes", "overlap_genes"]).issubset(set(adata_sc.uns.keys())):
@@ -225,7 +179,7 @@ def map_cells_to_space(
     pathway_index = adata_sp[:, training_genes].var.index.isin(pathway_genes) 
     
     celltype_index = [sp_celltypes == i for i in set(sp_celltypes)]
-    # for each spatial cell, find the closest 5 based on the coords 
+    # for each spatial cell, find the closest based on the coords 
     idx_closet_celltype = []
     for i in celltype_index:
         coords_celltype = sp_coords[i.values]
@@ -235,40 +189,6 @@ def map_cells_to_space(
             dist_closet.append(dist.argsort()[1:(ncell_thres+1)])
         idx_closet_celltype.append(np.stack(dist_closet))
 
-#     dist_celltype = [sp_dist[i][:, i] for i in celltype_index]
-#     idx_closet_celltype = [np.argsort(i, axis=1)[:, :ncell_thres] for i in dist_celltype]
-    
-#     idx_closet = np.argpartition(sp_dist, ncell_thres)[:, :ncell_thres] # for each row find the cloest 5 
-    
-    d_source = None
-
-    # define density_prior if 'rna_count_based' is passed to the density_prior argument:
-    d_str = density_prior
-    if type(density_prior) is np.ndarray:
-        d_str = "customized"
-
-    if density_prior == "rna_count_based":
-        density_prior = adata_sp.obs["rna_count_based_density"]
-
-    # define density_prior if 'uniform' is passed to the density_prior argument:
-    elif density_prior == "uniform":
-        density_prior = adata_sp.obs["uniform_density"]
-
-    if mode == "cells":
-        d = density_prior
-
-    if mode == "clusters":
-        d_source = np.array(adata_sc.obs["cluster_density"])
-
-    if mode in ["clusters", "constrained"]:
-        if density_prior is None:
-            d = adata_sp.obs["uniform_density"]
-            d_str = "uniform"
-        else:
-            d = density_prior
-        if lambda_d is None or lambda_d == 0:
-            lambda_d = 1
-
     # Choose device
     device = torch.device(device)  # for gpu
 
@@ -277,32 +197,21 @@ def map_cells_to_space(
     else:
         print_each = None
 
-    if mode in ["cells", "clusters"]:
-        hyperparameters = {
-            "lambda_d": lambda_d,  # KL (ie density) term
-            "lambda_genec": lambda_genec,  # gene-voxel cos sim
-            "lambda_g2": lambda_g2,  # voxel-gene cos sim
-            "lambda_r": lambda_r,  # regularizer: penalize entropy
-            "d_source": d_source,
-        }
+    hyperparameters = {
+        "lambda_g1": lambda_g1,  # gene-voxel cos sim
+        "lambda_g2": lambda_g2,  # voxel-gene cos sim
+    }
 
-        logging.info(
-            "Begin training with {} genes and {} density_prior in {} mode...".format(
-                len(training_genes), d_str, mode
-            )
-        )
-        mapper = mo.Mapper(
-            S=S, G=G, d=d, pathway_index=pathway_index, 
-            celltype_index = celltype_index, idx_closet_celltype = idx_closet_celltype, 
-            ncell_thres=ncell_thres, 
-            device=device, random_state=random_state, **hyperparameters,
-        )
+    mapper = mo.Mapping(
+        S=S, G=G, pathway_index=pathway_index, 
+        celltype_index = celltype_index, idx_closet_celltype = idx_closet_celltype, 
+        ncell_thres=ncell_thres, 
+        device=device, random_state=random_state, **hyperparameters,
+    )
 
-        # TODO `train` should return the loss function
-
-        mapping_matrix, training_history = mapper.train(
-            learning_rate=learning_rate, num_epochs=num_epochs, print_each=print_each,
-        )
+    mapping_matrix, training_history = mapper.train(
+        learning_rate=learning_rate, num_epochs=num_epochs, print_each=print_each,
+    )
 
     logging.info("Saving results..")
     adata_map = sc.AnnData(

@@ -8,11 +8,10 @@ The spatial transcriptomics dataset and the corresponding reference scRNA-seq da
 
 `conda env create -f environment.yml`
 
-- Install PASTA by typing the following in shell
+- Activate the enviornment by typing the following in shell
 
 `
-conda activate PASTA_env
-pip install PASTA
+conda activate pastaenv
 `
 
 # Simple example

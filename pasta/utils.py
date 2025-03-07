@@ -1,6 +1,3 @@
-"""
-    Utility functions
-"""
 import numpy as np
 import pandas as pd
 from collections import defaultdict
@@ -11,15 +8,12 @@ from tqdm import tqdm
 from sklearn.model_selection import LeaveOneOut
 from sklearn.model_selection import KFold
 
-import RL_mapping_utils as mu
+import mapper as mu
 
 import logging
 import warnings
 
 from sklearn.metrics import auc
-
-# import torch
-# from torch.nn.functional import cosine_similarity
 
 warnings.filterwarnings("ignore")
 logger_ann = logging.getLogger("anndata")
