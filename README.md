@@ -14,14 +14,5 @@ The spatial transcriptomics dataset and the corresponding reference scRNA-seq da
 conda activate pastaenv
 `
 
-# Simple example
-Suppose you have a spatial transcriptomics dataset `sp.csv` and a scRNA-seq dataset `sc.csv`. 
-```
-# read the datasets into anndata
-import pasta as pasta
-
-sp_ann = anndata.read_csv("sp.csv")
-sc_ann = anndata.read_csv("sc.csv")
-map = pasta.align(sp_ann, sc_ann)
-pasta.impute(map, sc_ann)
-```
+# Usage 
+Please see the example here: https://rx-li.github.io/PASTA.html.
