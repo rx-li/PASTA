@@ -107,8 +107,8 @@ class Mapping:
         
         if verbose:
 
-            term_numbers = [main_loss, vg_reg,  pathway_reg]
-            term_names = ["Score", "VG reg", "pathway_reg"]
+            term_numbers = [main_loss, pathway_reg]
+            term_names = ["Score", "pathway_reg"]
 
             d = dict(zip(term_names, term_numbers))
             clean_dict = {k: d[k] for k in d if not np.isnan(d[k])}

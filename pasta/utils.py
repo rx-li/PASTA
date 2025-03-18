@@ -332,7 +332,7 @@ def deconvolve_cell_annotations(adata_sp, filter_cell_annotation=None):
     return adata_segment
 
 
-def project_genes(adata_map, adata_sc, cluster_label=None, scale=True):
+def project_genes(adata_map, adata_sc, pthw, cluster_label=None, scale=True):
     """
     Transfer gene expression from the single cell onto space.
 
@@ -363,12 +363,16 @@ def project_genes(adata_map, adata_sc, cluster_label=None, scale=True):
     if hasattr(adata_sc.X, "toarray"):
         adata_sc.X = adata_sc.X.toarray()
     X_space = adata_map.X.T @ adata_sc.X
+    
     adata_ge = sc.AnnData(
         X=X_space, obs=adata_map.var, var=adata_sc.var, uns=adata_sc.uns
     )
-    training_genes = adata_map.uns["train_genes_df"].index.values
-    adata_ge.var["is_training"] = adata_ge.var.index.isin(training_genes)
-    return adata_ge
+    df = adata_ge.to_df()
+    pthw_exp = df.loc[:, df.columns.isin(pthw.str.lower())].sum(axis=1)
+    # training_genes = adata_map.uns["train_genes_df"].index.values
+    # adata_ge.var["is_training"] = adata_ge.var.index.isin(training_genes)
+    
+    return pthw_exp
 
 
 def compare_spatial_geneexp(adata_ge, adata_sp, adata_sc=None, genes=None):
