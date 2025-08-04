@@ -77,9 +77,9 @@ def mapping(
     adata_sp,
     pathway_genes,
     sp_coords, # spatial coords
-    ncell_thres, 
     sp_celltypes, # spatial celltype
     cv_train_genes=None,
+    ncell_thres=10,
     device="cpu",
     learning_rate=0.01,
     num_epochs=500,
@@ -182,7 +182,8 @@ def mapping(
         "lambda_1": lambda_1,  # gene-voxel cos sim
         "lambda_2": lambda_2,  # voxel-gene cos sim
         "lambda_3": lambda_3,
-        "lambda_3": lambda_4
+        "lambda_3": lambda_4,
+        "learning_rate": learning_rate
     }
 
     mapper = mo.Mapping(

@@ -14,9 +14,7 @@ class Mapping:
         pathway_index, # spatial gene pathway index 
         celltype_index,
         idx_closet_celltype, 
-        ncell_thres, 
-       # d=None,
-       # d_source=None,
+        ncell_thres=10, 
         lambda_1=1,
         lambda_2=1,
         lambda_3=1,
