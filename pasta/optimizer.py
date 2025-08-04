@@ -17,8 +17,10 @@ class Mapping:
         ncell_thres, 
        # d=None,
        # d_source=None,
-        lambda_g1=1.0,
-        lambda_g2=1,
+        lambda_1=1,
+        lambda_2=1,
+        lambda_3=1,
+        lambda_4=1,
         device="cpu",
         adata_map=None,
         random_state=None,
@@ -32,8 +34,10 @@ class Mapping:
         d_source (ndarray): Density of single cells in single cell clusters. To be used when S corresponds to cluster-level expression.
                 This array should satisfy the constraint d_source.sum() == 1.
         
-        lambda_g1 (float): Optional. gene/cell loss function. Default is 1.
-        lambda_g2 (float): Optional. Strength of voxel-gene regularizer. Default is 1.
+        lambda_1 (float): reconstruction loss function. Default is 1.
+        lambda_2 (float): gene/cell loss function. Default is 1.
+        lambda_3 (float): pathway loss. Default is 1.
+        lambda_4 (float): neighborhood loss. Default is 1. 
         device (str or torch.device): Default is 'cpu'.
         #random_state (int): Optional. pass an int to reproduce training. Default is None.
         """
@@ -52,8 +56,10 @@ class Mapping:
         # if self.source_density_enabled:
         #     self.d_source = torch.tensor(d_source, device=device, dtype=torch.float32)
 
-        self.lambda_g1 = lambda_g1
-        self.lambda_g2 = lambda_g2
+        self.lambda_1 = lambda_1
+        self.lambda_2 = lambda_2
+        self.lambda_3 = lambda_3
+        self.lambda_4 = lambda_4
        # self._density_criterion = torch.nn.KLDivLoss(reduction="sum")
 
         self.random_state = random_state
@@ -75,8 +81,8 @@ class Mapping:
         M_probs = softmax(self.M, dim=1) 
 
         G_pred = torch.matmul(M_probs.t(), self.S) # prediction spatial 
-        gv_term = self.lambda_g1 * cosine_similarity(G_pred, self.G, dim=0).mean() # loss in genes
-        gv_term2 = self.lambda_g1 * cosine_similarity(G_pred[:, self.pathway_index], self.G[:, self.pathway_index], dim=0).mean() # loss in genes
+        gv_term = self.lambda_2 * cosine_similarity(G_pred, self.G, dim=0).mean() # loss in genes
+        gv_term2 = self.lambda_3 * cosine_similarity(G_pred[:, self.pathway_index], self.G[:, self.pathway_index], dim=0).mean() # loss in genes
         
         # A loss term for pathway 
         pathway_pred_f = G_pred[:, self.pathway_index] # get the pathway genes 
@@ -98,12 +104,12 @@ class Mapping:
         pathway_term = torch.stack(score_celltypes).mean()     
         vg_term = torch.stack(vg_celltypes).mean()
 
-        expression_term = gv_term + vg_term + gv_term2
+        expression_term = gv_term + self.lambda_4 * vg_term + gv_term2
 
-        main_loss = (gv_term / self.lambda_g1).tolist()
+        main_loss = (gv_term / self.lambda_2).tolist()
 
-        vg_reg = (vg_term / self.lambda_g2).tolist()
-        pathway_reg = pathway_term.tolist()
+        vg_reg = (vg_term / 1).tolist()
+        pathway_reg = self.lambda_1 * pathway_term.tolist()
         
         if verbose:
 

@@ -83,8 +83,10 @@ def mapping(
     device="cpu",
     learning_rate=0.01,
     num_epochs=500,
-    lambda_g1=1,
-    lambda_g2=0,
+    lambda_1=1,
+    lambda_2=1,
+    lambda_3=1,
+    lambda_4=1,
     random_state=None,
     verbose=True,
 ):
@@ -94,15 +96,9 @@ def mapping(
     Args:
         adata_sc (AnnData): single cell data
         adata_sp (AnnData): gene spatial data
-        cv_train_genes (list): Optional. Training gene list. Default is None.
-        mode (str): Optional. Tangram mapping mode. Currently supported: 'cell', 'clusters', 'constrained'. Default is 'cell'.
         device (string or torch.device): Optional. Default is 'cpu'.
         learning_rate (float): Optional. Learning rate for the optimizer. Default is 0.1.
         num_epochs (int): Optional. Number of epochs. Default is 1000.
-        lambda_genec (float): Optional. Hyperparameter for the gene-voxel similarity term of the optimizer. Default is 1.
-        lambda_g2 (float): Optional. Hyperparameter for the voxel-gene similarity term of the optimizer. Default is 0.
-        random_state (int): Optional. pass an int to reproduce training. Default is None.
-        verbose (bool): Optional. If print training details. Default is True.
     
     Returns:
         a cell-by-spot AnnData containing the probability of mapping cell i on spot j.
@@ -110,15 +106,15 @@ def mapping(
     """
 
     # check invalid values for arguments
-    if lambda_g1 == 0:
-        raise ValueError("lambda_genec cannot be 0.")
+    if lambda_1 == 0:
+        raise ValueError("lambda_1 cannot be 0.")
 
     # Check if training_genes key exist/is valid in adatas.uns
     if not set(["training_genes", "overlap_genes"]).issubset(set(adata_sc.uns.keys())):
-        raise ValueError("Missing tangram parameters. Run `pp_adatas()`.")
+        raise ValueError("Missing parameters. Run `pp_adatas()`.")
 
     if not set(["training_genes", "overlap_genes"]).issubset(set(adata_sp.uns.keys())):
-        raise ValueError("Missing tangram parameters. Run `pp_adatas()`.")
+        raise ValueError("Missing parameters. Run `pp_adatas()`.")
 
     assert list(adata_sp.uns["training_genes"]) == list(adata_sc.uns["training_genes"])
 
@@ -183,8 +179,10 @@ def mapping(
         print_each = None
 
     hyperparameters = {
-        "lambda_g1": lambda_g1,  # gene-voxel cos sim
-        "lambda_g2": lambda_g2,  # voxel-gene cos sim
+        "lambda_1": lambda_1,  # gene-voxel cos sim
+        "lambda_2": lambda_2,  # voxel-gene cos sim
+        "lambda_3": lambda_3,
+        "lambda_3": lambda_4
     }
 
     mapper = mo.Mapping(
