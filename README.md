@@ -65,3 +65,6 @@ The function takes several inputs:
 
 # Usage 
 A more detailed description can be found here: https://pasta-website.readthedocs.io/en/latest/.
+
+# DOI
+10.5281/zenodo.17336118
